@@ -4,73 +4,126 @@
   <meta charset="UTF-8" />
   <title>HeyGen Player Embed</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; }
-    #playerContainer { width: 640px; height: 360px; border: 1px solid #ccc; }
+    body { font-family: system-ui, sans-serif; padding: 16px; }
+    #playerContainer { width: 640px; height: 360px; border: 1px solid #ccc; background:#000; }
+    #log { font-size: 12px; white-space: pre-wrap; border:1px solid #eee; padding:8px; margin-top:12px; max-height:180px; overflow:auto;}
   </style>
 </head>
 <body>
-  <h2>HeyGen Player Embed Test</h2>
+  <h2>HeyGen Player Embed</h2>
   <div id="playerContainer"></div>
-  <p id="status">Waiting for session…</p>
+  <div id="status">Booting…</div>
+  <div id="log"></div>
 
-  <!-- ✅ Load your UMD bundle -->
-  <script src="https://docstar0.github.io/heygen-player-v3-cdn/dist/heygen-player-v3.umd.js"></script>
+  <!-- IMPORTANT: src must match your built filename in /dist -->
+  <script src="https://docstar0.github.io/heygen-player-v2-cdn/dist/heygen-player-v3.umd.js"></script>
 
   <script>
-    console.log("[embed] Booting…");
-    console.log("[debug] window.HeyGenPlayer =", window.HeyGenPlayer);
+    const $ = (id) => document.getElementById(id);
+    const statusEl = $("status");
+    const logEl = $("log");
+    const container = $("playerContainer");
 
-    const container = document.getElementById("playerContainer");
-    const status = document.getElementById("status");
+    function log(...args) {
+      console.log(...args);
+      try { logEl.textContent += args.map(a => typeof a==='string' ? a : JSON.stringify(a)).join(' ') + "\n"; }
+      catch { /* ignore */ }
+    }
 
-    // 🔑 Listen for messages from Wix page
+    function mustHaveUMD() {
+      if (!window.HeyGenPlayer) {
+        const msg = "UMD not loaded: window.HeyGenPlayer is undefined.";
+        statusEl.textContent = msg;
+        log(msg, "\nCheck: <script src> path & filename match /dist output, and hard-refresh (Cmd/Ctrl+Shift+R).");
+        throw new Error(msg);
+      }
+    }
+
+    async function bootWith({ token, avatarId, kbId, sessionId, rtcUrl, accessToken }) {
+      mustHaveUMD();
+
+      // Sanity defaults (so you don’t need to keep editing the HTML)
+      avatarId = avatarId || "Dexter_Doctor_Standing2_public";
+      kbId     = kbId     || "14b2ed85d8804bf5bef881da5a7e819e";
+
+      log("[embed] starting with data:", { hasToken: !!token, avatarId, kbId, sessionId, rtcUrl, hasAccessToken: !!accessToken });
+
+      // IMPORTANT:
+      // Your UMD's create() should ALREADY do createStartAvatar() or startAvatar().
+      // Do NOT call player.startAvatar() again here. That’s what likely “broke it” last time.
+
+      let player;
+      if (sessionId && rtcUrl && accessToken) {
+        // Pre-minted LiveKit session path
+        player = await window.HeyGenPlayer.create({
+          token,         // optional but useful
+          avatarId,
+          kbId,
+          sessionId,
+          rtcUrl,
+          accessToken,   // REQUIRED for LK connect
+          container,
+        });
+      } else if (token) {
+        // Token-only path — SDK will call /v1/streaming.new and .start internally
+        player = await window.HeyGenPlayer.create({
+          token,
+          avatarId,
+          kbId,
+          container,
+        });
+      } else {
+        throw new Error("No token OR (sessionId+rtcUrl+accessToken) provided.");
+      }
+
+      statusEl.textContent = "Player created ✔ Waiting for stream…";
+
+      // If your UMD wires 'stream_ready', you’ll get video attached automatically.
+      // Otherwise, you can also mount here if your UMD exposes a stream:
+      // (but per your current UMD, it attaches on 'stream_ready'.)
+
+      log("[embed] ✅ player created");
+      statusEl.textContent = "Ready ✔";
+      return player;
+    }
+
+    // 1) Wix → postMessage flow
     window.addEventListener("message", async (event) => {
-      const { token, avatarId, kbId, sessionId, rtcUrl } = event.data;
-      console.log("[embed] 📩 received from Wix:", event.data);
-
       try {
-        if (!window.HeyGenPlayer) {
-          throw new Error("window.HeyGenPlayer is undefined. UMD did not load properly.");
-        }
-
-        let player;
-
-        // Case A: full LiveKit session provided (v2/v3)
-        if (sessionId && rtcUrl) {
-          console.log("[embed] 🚀 creating player with session + rtcUrl…");
-          player = await window.HeyGenPlayer.create({
-            token,
-            avatarId,
-            kbId,
-            sessionId,
-            rtcUrl,
-            container,
-          });
-        } 
-        // Case B: simple token-only flow (SDK handles newSession)
-        else if (token) {
-          console.log("[embed] 🚀 creating player with token only…");
-          player = await window.HeyGenPlayer.create({
-            token,
-            avatarId,
-            kbId,
-            container,
-          });
-        } else {
-          throw new Error("No token/session info provided from Wix");
-        }
-
-        console.log("[embed] 🎉 player created:", player);
-        status.textContent = "Player created successfully!";
-
-        // Start avatar
-        await player.startAvatar();
-        console.log("[embed] ✅ avatar started");
+        log("[embed] postMessage received:", event.data);
+        await bootWith(event.data || {});
       } catch (err) {
-        console.error("[embed] ❌ failed:", err);
-        status.textContent = "Error: " + err.message;
+        log("[embed] ❌ error:", err?.message || err);
+        statusEl.textContent = "Error: " + (err?.message || err);
       }
     });
+
+    // 2) Debug → URL params flow (so you can test OUTSIDE Wix)
+    // Example:
+    //   ?token=sk_xxx
+    //   OR
+    //   ?sessionId=...&rtcUrl=wss://...&accessToken=...
+    (async () => {
+      const q = new URLSearchParams(location.search);
+      const token       = q.get("token");
+      const avatarId    = q.get("avatarId");
+      const kbId        = q.get("kbId");
+      const sessionId   = q.get("sessionId");
+      const rtcUrl      = q.get("rtcUrl");
+      const accessToken = q.get("accessToken");
+
+      log("[embed] window.HeyGenPlayer =", window.HeyGenPlayer);
+      if (token || (sessionId && rtcUrl && accessToken)) {
+        try {
+          await bootWith({ token, avatarId, kbId, sessionId, rtcUrl, accessToken });
+        } catch (e) {
+          log("[embed] ❌ auto-boot error:", e?.message || e);
+          statusEl.textContent = "Error: " + (e?.message || e);
+        }
+      } else {
+        statusEl.textContent = "Waiting for token/session via postMessage or URL params…";
+      }
+    })();
   </script>
 </body>
 </html>
