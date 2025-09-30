@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HeyGen Player Embed</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    #playerContainer { width: 640px; height: 360px; border: 1px solid #ccc; }
+  </style>
+</head>
+<body>
+  <h2>HeyGen Player Embed Test (v3)</h2>
+  <div id="playerContainer"></div>
+  <button id="startBtn">Start Avatar</button>
+
+  <!-- ✅ Load your new UMD bundle -->
+  <script src="https://docstar0.github.io/heygen-player-v3-cdn/dist/heygen-player.umd.js"></script>
+
+  <script>
+    console.log("[embed] Booting…");
+    console.log("[debug] window.HeyGenPlayer =", window.HeyGenPlayer);
+
+    const startBtn = document.getElementById("startBtn");
+
+    startBtn.onclick = async () => {
+      console.log("[embed] 🚀 creating player…");
+      try {
+        if (!window.HeyGenPlayer) {
+          throw new Error("window.HeyGenPlayer is undefined. UMD did not load properly.");
+        }
+
+        // Create the player with your session token + avatar info
+        const player = await window.HeyGenPlayer.create({
+          token: "REPLACE_WITH_YOUR_TOKEN",   // 👈 must be a real HeyGen API key
+          avatarName: "Dexter_Doctor_Standing2_public", // 👈 your avatar name
+          kbId: "14b2ed85d8804bf5bef881da5a7e819e",      // 👈 knowledge base id
+          container: document.getElementById("playerContainer"),
+        });
+
+        console.log("[embed] 🎉 player created:", player);
+
+        // Start avatar speaking loop
+        await player.startVoiceChat?.();
+        console.log("[embed] ✅ avatar started");
+      } catch (err) {
+        console.error("[embed] ❌ failed:", err);
+      }
+    };
+  </script>
+</body>
+</html>
