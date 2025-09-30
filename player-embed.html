@@ -16,10 +16,14 @@
   <button id="stopBtn">⏹ Stop</button>
 
   <!-- Load your new UMD build -->
- <script src="https://docstar0.github.io/heygen-player-v2-cdn/dist/heygen-player.umd.js"></script>
+<script src="https://docstar0.github.io/heygen-player-v2-cdn/dist/heygen-player.umd.js"
+        onload="console.log('[player-embed] ✅ UMD loaded')"
+        onerror="console.error('[player-embed] ❌ failed to load UMD')">
+</script>
 <script>
   console.log("[debug] window.HeyGenPlayer =", window.HeyGenPlayer);
 </script>
+
 
 
     let player = null;
