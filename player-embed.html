@@ -15,6 +15,28 @@
 
   <!-- ✅ Load your new UMD bundle -->
   <script src="https://docstar0.github.io/heygen-player-v2-cdn/dist/heygen-player-v3.umd.js"></script>
+<script>
+  window.addEventListener("message", async (event) => {
+    console.log("[embed] got message from Wix:", event.data);
+
+    const { token, avatarName, kbId } = event.data;
+
+    try {
+      const player = await window.HeyGenPlayer.create({
+        token,
+        avatarName,
+        kbId,
+        container: document.getElementById("playerContainer"),
+      });
+
+      console.log("[embed] 🎉 player created:", player);
+      await player.startAvatar();
+      console.log("[embed] ✅ avatar started");
+    } catch (err) {
+      console.error("[embed] ❌ failed:", err);
+    }
+  });
+</script>
 
   <script>
     console.log("[embed] Booting…");
