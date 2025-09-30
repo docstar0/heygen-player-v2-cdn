@@ -9,69 +9,68 @@
   </style>
 </head>
 <body>
-  <h2>HeyGen Player Embed Test (v333)</h2>
+  <h2>HeyGen Player Embed Test</h2>
   <div id="playerContainer"></div>
-  <button id="startBtn">Start Avatar</button>
+  <p id="status">Waiting for session…</p>
 
-  <!-- ✅ Load your new UMD bundle -->
-  <script src="https://docstar0.github.io/heygen-player-v2-cdn/dist/heygen-player-v3.umd.js"></script>
-<script>
-  window.addEventListener("message", async (event) => {
-    const { token, avatarId, kbId } = event.data;
-    console.log("[embed] received token + ids", { token, avatarId, kbId });
-
-    if (!token) {
-      console.error("[embed] ❌ no token provided");
-      return;
-    }
-
-    try {
-      const player = await window.HeyGenPlayer.create({
-        token,
-        avatarId,
-        kbId,
-        container: document.getElementById("playerContainer"),
-      });
-
-      console.log("[embed] 🎉 player created:", player);
-      await player.startAvatar();
-    } catch (err) {
-      console.error("[embed] ❌ failed:", err);
-    }
-  });
-</script>
-
+  <!-- ✅ Load your UMD bundle -->
+  <script src="https://docstar0.github.io/heygen-player-v3-cdn/dist/heygen-player-v3.umd.js"></script>
 
   <script>
     console.log("[embed] Booting…");
     console.log("[debug] window.HeyGenPlayer =", window.HeyGenPlayer);
 
-    const startBtn = document.getElementById("startBtn");
+    const container = document.getElementById("playerContainer");
+    const status = document.getElementById("status");
 
-    startBtn.onclick = async () => {
-      console.log("[embed] 🚀 creating player…");
+    // 🔑 Listen for messages from Wix page
+    window.addEventListener("message", async (event) => {
+      const { token, avatarId, kbId, sessionId, rtcUrl } = event.data;
+      console.log("[embed] 📩 received from Wix:", event.data);
+
       try {
         if (!window.HeyGenPlayer) {
           throw new Error("window.HeyGenPlayer is undefined. UMD did not load properly.");
         }
 
-        // Create the player with your session token + avatar info
-        const player = await window.HeyGenPlayer.create({
-          token: "REPLACE_WITH_YOUR_TOKEN",   // 👈 must be a real HeyGen API key
-          avatarName: "Dexter_Doctor_Standing2_public", // 👈 your avatar name
-          kbId: "14b2ed85d8804bf5bef881da5a7e819e",      // 👈 knowledge base id
-          container: document.getElementById("playerContainer"),
-        });
+        let player;
+
+        // Case A: full LiveKit session provided (v2/v3)
+        if (sessionId && rtcUrl) {
+          console.log("[embed] 🚀 creating player with session + rtcUrl…");
+          player = await window.HeyGenPlayer.create({
+            token,
+            avatarId,
+            kbId,
+            sessionId,
+            rtcUrl,
+            container,
+          });
+        } 
+        // Case B: simple token-only flow (SDK handles newSession)
+        else if (token) {
+          console.log("[embed] 🚀 creating player with token only…");
+          player = await window.HeyGenPlayer.create({
+            token,
+            avatarId,
+            kbId,
+            container,
+          });
+        } else {
+          throw new Error("No token/session info provided from Wix");
+        }
 
         console.log("[embed] 🎉 player created:", player);
+        status.textContent = "Player created successfully!";
 
-        // Start avatar speaking loop
-        await player.startVoiceChat?.();
+        // Start avatar
+        await player.startAvatar();
         console.log("[embed] ✅ avatar started");
       } catch (err) {
         console.error("[embed] ❌ failed:", err);
+        status.textContent = "Error: " + err.message;
       }
-    };
+    });
   </script>
 </body>
 </html>
