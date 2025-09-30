@@ -1,40 +1,46 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8">
-    <title>HeyGen Player v2</title>
-    <style>
-      body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; }
-      #playerBox { width:800px; height:600px; background:#111; }
-      button { position:absolute; top:10px; left:10px; padding:8px 12px; }
-    </style>
-  </head>
-  <body>
-    <div id="playerBox"></div>
-    <button id="startBtn">▶ Start</button>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HeyGen Player V2</title>
+  <style>
+    body { margin:0; background:#111; color:#fff; font-family:sans-serif; }
+    #player { width: 640px; height: 360px; border: none; background:#000; }
+    button { margin: 10px; padding: 8px 16px; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h3>HeyGen Player Test</h3>
+  <div id="player"></div>
+  <button id="startBtn">▶ Start</button>
 
-    <!-- ✅ Directly load HeyGen UMD from unpkg -->
-    <script src="https://unpkg.com/@heygen/sdk-player/dist/index.umd.js"></script>
-    <script>
-      console.log("[debug] window.HeyGenPlayer =", window.HeyGenPlayer);
+  <!-- ✅ Your bundled SDK -->
+  <script src="https://docstar0.github.io/heygen-player-v2-cdn/dist/heygen-player.umd.js"></script>
 
-      const startBtn = document.getElementById("startBtn");
-      startBtn.onclick = async () => {
+  <script>
+    console.log("[debug] window.HeyGenPlayer =", window.HeyGenPlayer);
+
+    const startBtn = document.getElementById("startBtn");
+    const playerDiv = document.getElementById("player");
+
+    startBtn.onclick = async () => {
+      try {
         console.log("[player-embed] 🚀 creating player…");
 
-        try {
-          const player = await window.HeyGenPlayer.create({
-            token: "YOUR_TOKEN",   // replace at runtime
-            avatarId: "Dexter_Doctor_Standing2_public",
-            kbId: "14b2ed85d8804bf5bef881da5a7e819e",
-            container: document.getElementById("playerBox"),
-          });
+        const player = await window.HeyGenPlayer.create({
+          token: "REPLACE_WITH_TOKEN",   // your token
+          avatarId: "Dexter_Doctor_Standing2_public",
+          container: playerDiv,
+        });
 
-          console.log("[player-embed] ✅ player created", player);
-        } catch (err) {
-          console.error("[player-embed] ❌ failed:", err);
-        }
-      };
-    </script>
-  </body>
+        console.log("[player-embed] ✅ player created:", player);
+
+        await player.startAvatar();
+        console.log("[player-embed] 🎉 avatar started!");
+      } catch (err) {
+        console.error("[player-embed] ❌ failed:", err);
+      }
+    };
+  </script>
+</body>
 </html>
