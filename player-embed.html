@@ -53,24 +53,23 @@
       // Do NOT call player.startAvatar() again here. That’s what likely “broke it” last time.
 
       let player;
-      if (sessionId && rtcUrl && accessToken) {
-        // Pre-minted LiveKit session path
-        player = await window.HeyGenPlayer.create({
-          token,         // optional but useful
-          avatarId,
-          kbId,
-          sessionId,
-          rtcUrl,
-          accessToken,   // REQUIRED for LK connect
-          container,
-        });
-      } else if (token) {
-        // Token-only path — SDK will call /v1/streaming.new and .start internally
-        player = await window.HeyGenPlayer.create({
-          token,
-          avatarId,
-          kbId,
-          container,
+     if (sessionId && rtcUrl && accessToken) {
+  // Pre-minted LiveKit session path
+  player = await window.HeyGenPlayer.create({
+    token: accessToken,   // 👈 force-map LK accessToken into token
+    avatarId,
+    kbId,
+    sessionId,
+    rtcUrl,
+    container,
+  });
+} else if (token) {
+  // Token-only path
+  player = await window.HeyGenPlayer.create({
+    token,
+    avatarId,
+    kbId,
+    container,
         });
       } else {
         throw new Error("No token OR (sessionId+rtcUrl+accessToken) provided.");
