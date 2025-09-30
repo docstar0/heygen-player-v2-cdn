@@ -1,0 +1,1 @@
+(function(e){typeof define=="function"&&define.amd?define(e):e()})((function(){"use strict";(async()=>{const e=await import("https://unpkg.com/@heygen/sdk-player/dist/index.js");typeof window<"u"&&(window.HeyGenPlayer=e.HeyGenPlayer,console.log("[vite build] ✅ window.HeyGenPlayer set"))})()}));
