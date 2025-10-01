@@ -60,14 +60,13 @@
 
   let player;
   if (sessionId && rtcUrl && lkToken) {
-    // Pre-minted LiveKit session path
-    player = await window.HeyGenPlayer.create({
-      token: lkToken,   // 👈 force correct mapping
-      avatarId,
-      kbId,
-      sessionId,
-      rtcUrl,
-      container,
+  player = await window.HeyGenPlayer.create({
+    sessionId,
+    rtcUrl,
+    accessToken: lkToken,  // 👈 important
+    avatarId,
+    kbId,
+    container,
     });
   } else if (token) {
     // Token-only path
