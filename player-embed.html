@@ -39,74 +39,41 @@
       }
     }
 
-    async function bootWith({ token, avatarId, kbId, sessionId, rtcUrl, accessToken }) {
-  mustHaveUMD();
+  async function bootWith({ avatarId, kbId, sessionId, rtcUrl, accessToken }) {
+    mustHaveUMD();
 
-  avatarId = avatarId || "Dexter_Doctor_Standing2_public";
-  kbId     = kbId     || "14b2ed85d8804bf5bef881da5a7e819e";
+    avatarId = avatarId || "Dexter_Doctor_Standing2_public";
+    kbId     = kbId     || "14b2ed85d8804bf5bef881da5a7e819e";
 
-  // 👇 Normalize explicitly
-  const lkToken = accessToken || token;
-
-  log("[embed] starting with data:", {
-    hasToken: !!token,
-    hasAccessToken: !!accessToken,
-    using: lkToken ? "LK access token" : "API key",
-    avatarId,
-    kbId,
-    sessionId,
-    rtcUrl,
-  });
-
-  let player;
-  if (sessionId && rtcUrl && lkToken) {
-  player = await window.HeyGenPlayer.create({
-    sessionId,
-    rtcUrl,
-    accessToken: lkToken,  // 👈 important
-    avatarId,
-    kbId,
-    container,
+    log("[embed] starting with data:", {
+      avatarId, kbId, sessionId, rtcUrl, hasAccessToken: !!accessToken
     });
-  } else if (token) {
-    // Token-only path
-    player = await window.HeyGenPlayer.create({
-      token,
-      avatarId,
-      kbId,
-      container,
-    });
-  } else {
-    throw new Error("No token provided");
-  }
 
-  statusEl.textContent = "Player created ✔ Waiting for stream…";
-  log("[embed] ✅ player created");
+    if (sessionId && rtcUrl && accessToken) {
+      const player = await window.HeyGenPlayer.create({
+        sessionId,
+        rtcUrl,
+        accessToken,   // 👈 always the right key
+        avatarId,
+        kbId,
+        container,
+      });
 
-  if (player && player.stream) {
-    const videoEl = document.createElement("video");
-    videoEl.autoplay = true;
-    videoEl.playsInline = true;
-    videoEl.muted = true;
-    videoEl.srcObject = player.stream;
-
-    container.innerHTML = "";
-    container.appendChild(videoEl);
-    log("[embed] 🎥 manually attached stream (muted autoplay)");
-  }
-
-  statusEl.textContent = "Ready ✔";
-  return player;
+      statusEl.textContent = "Ready ✔";
+      log("[embed] ✅ player created");
+      return player;
     }
 
-    // 1) Wix → postMessage flow
-    window.addEventListener("message", async (event) => {
-      try {
-        log("[embed] postMessage received:", event.data);
-        await bootWith(event.data || {});
-      } catch (err) {
-        log("[embed] ❌ error:", err?.message || err);
-        statusEl.textContent = "Error: " + (err?.message || err);
+    throw new Error("No valid LiveKit session+token provided.");
+  }
+
+  window.addEventListener("message", async (event) => {
+    try {
+      log("[embed] postMessage received:", event.data);
+      await bootWith(event.data || {});
+    } catch (err) {
+      log("[embed] ❌ error:", err?.message || err);
+      statusEl.textContent = "Error: " + (err?.message || err);
       }
     });
 
