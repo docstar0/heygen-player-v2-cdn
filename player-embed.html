@@ -42,27 +42,27 @@
     async function bootWith({ token, avatarId, kbId, sessionId, rtcUrl, accessToken }) {
   mustHaveUMD();
 
-  // Sanity defaults
   avatarId = avatarId || "Dexter_Doctor_Standing2_public";
   kbId     = kbId     || "14b2ed85d8804bf5bef881da5a7e819e";
 
-  // Normalize
-  token = token || accessToken;
+  // 👇 Normalize explicitly
+  const lkToken = accessToken || token;
 
   log("[embed] starting with data:", {
     hasToken: !!token,
+    hasAccessToken: !!accessToken,
+    using: lkToken ? "LK access token" : "API key",
     avatarId,
     kbId,
     sessionId,
     rtcUrl,
-    hasAccessToken: !!accessToken
   });
 
   let player;
-  if (sessionId && rtcUrl && token) {
+  if (sessionId && rtcUrl && lkToken) {
     // Pre-minted LiveKit session path
     player = await window.HeyGenPlayer.create({
-      token,
+      token: lkToken,   // 👈 force correct mapping
       avatarId,
       kbId,
       sessionId,
@@ -84,12 +84,11 @@
   statusEl.textContent = "Player created ✔ Waiting for stream…";
   log("[embed] ✅ player created");
 
-  // 👇 Safeguard: manually attach stream if SDK doesn’t mount it
   if (player && player.stream) {
     const videoEl = document.createElement("video");
     videoEl.autoplay = true;
     videoEl.playsInline = true;
-    videoEl.muted = true;   // 👈 allows autoplay without click
+    videoEl.muted = true;
     videoEl.srcObject = player.stream;
 
     container.innerHTML = "";
