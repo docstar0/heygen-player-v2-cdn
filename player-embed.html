@@ -40,50 +40,65 @@
     }
 
     async function bootWith({ token, avatarId, kbId, sessionId, rtcUrl, accessToken }) {
-      mustHaveUMD();
+  mustHaveUMD();
 
-      // Sanity defaults (so you don’t need to keep editing the HTML)
-      avatarId = avatarId || "Dexter_Doctor_Standing2_public";
-      kbId     = kbId     || "14b2ed85d8804bf5bef881da5a7e819e";
+  // Sanity defaults
+  avatarId = avatarId || "Dexter_Doctor_Standing2_public";
+  kbId     = kbId     || "14b2ed85d8804bf5bef881da5a7e819e";
 
-      log("[embed] starting with data:", { hasToken: !!token, avatarId, kbId, sessionId, rtcUrl, hasAccessToken: !!accessToken });
+  // Normalize
+  token = token || accessToken;
 
-      // IMPORTANT:
-      // Your UMD's create() should ALREADY do createStartAvatar() or startAvatar().
-      // Do NOT call player.startAvatar() again here. That’s what likely “broke it” last time.
-
-      let player;
-     if (sessionId && rtcUrl && accessToken) {
-  // Pre-minted LiveKit session path
-  player = await window.HeyGenPlayer.create({
-    token = token || accessToken;
+  log("[embed] starting with data:", {
+    hasToken: !!token,
     avatarId,
     kbId,
     sessionId,
     rtcUrl,
-    container,
+    hasAccessToken: !!accessToken
   });
-} else if (token) {
-  // Token-only path
-  player = await window.HeyGenPlayer.create({
-    token,
-    avatarId,
-    kbId,
-    container,
-        });
-      } else {
-        throw new Error("No token OR (sessionId+rtcUrl+accessToken) provided.");
-      }
 
-      statusEl.textContent = "Player created ✔ Waiting for stream…";
+  let player;
+  if (sessionId && rtcUrl && token) {
+    // Pre-minted LiveKit session path
+    player = await window.HeyGenPlayer.create({
+      token,
+      avatarId,
+      kbId,
+      sessionId,
+      rtcUrl,
+      container,
+    });
+  } else if (token) {
+    // Token-only path
+    player = await window.HeyGenPlayer.create({
+      token,
+      avatarId,
+      kbId,
+      container,
+    });
+  } else {
+    throw new Error("No token provided");
+  }
 
-      // If your UMD wires 'stream_ready', you’ll get video attached automatically.
-      // Otherwise, you can also mount here if your UMD exposes a stream:
-      // (but per your current UMD, it attaches on 'stream_ready'.)
+  statusEl.textContent = "Player created ✔ Waiting for stream…";
+  log("[embed] ✅ player created");
 
-      log("[embed] ✅ player created");
-      statusEl.textContent = "Ready ✔";
-      return player;
+  // 👇 Safeguard: manually attach stream if SDK doesn’t mount it
+  if (player && player.stream) {
+    const videoEl = document.createElement("video");
+    videoEl.autoplay = true;
+    videoEl.playsInline = true;
+    videoEl.muted = true;   // 👈 allows autoplay without click
+    videoEl.srcObject = player.stream;
+
+    container.innerHTML = "";
+    container.appendChild(videoEl);
+    log("[embed] 🎥 manually attached stream (muted autoplay)");
+  }
+
+  statusEl.textContent = "Ready ✔";
+  return player;
     }
 
     // 1) Wix → postMessage flow
