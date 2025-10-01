@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>HeyGen Player Embed X</title>
+  <title>HeyGen Player Embed</title>
   <style>
     body { font-family: system-ui, sans-serif; padding: 16px; }
     #playerContainer { width: 640px; height: 360px; border: 1px solid #ccc; background:#000; }
@@ -34,54 +34,88 @@
       if (!window.HeyGenPlayer) {
         const msg = "UMD not loaded: window.HeyGenPlayer is undefined.";
         statusEl.textContent = msg;
-        log(msg, "\nCheck: <script src> path & filename match /dist output, and hard-refresh (Cmd/Ctrl+Shift+R).");
+        log(msg, "\nCheck: <script src> path & filename match /dist output, and hard-refresh.");
         throw new Error(msg);
       }
     }
 
-  async function bootWith({ avatarId, kbId, sessionId, rtcUrl, accessToken }) {
-    mustHaveUMD();
+    async function bootWith({ token, accessToken, avatarId, kbId, sessionId, rtcUrl }) {
+      mustHaveUMD();
 
-    avatarId = avatarId || "Dexter_Doctor_Standing2_public";
-    kbId     = kbId     || "14b2ed85d8804bf5bef881da5a7e819e";
+      // Defaults
+      avatarId = avatarId || "Dexter_Doctor_Standing2_public";
+      kbId     = kbId     || "14b2ed85d8804bf5bef881da5a7e819e";
 
-    log("[embed] starting with data:", {
-      avatarId, kbId, sessionId, rtcUrl, hasAccessToken: !!accessToken
-    });
+      // Normalize → always pass `token`
+      const lkToken = accessToken || token;
 
-    if (sessionId && rtcUrl && accessToken) {
-      const player = await window.HeyGenPlayer.create({
-        sessionId,
-        rtcUrl,
-        accessToken,   // 👈 always the right key
-        avatarId,
-        kbId,
-        container,
+      log("[embed] starting with data:", {
+        hasToken: !!token,
+        hasAccessToken: !!accessToken,
+        using: accessToken ? "accessToken" : "token",
+        avatarId, kbId, sessionId, rtcUrl
       });
 
-      statusEl.textContent = "Ready ✔";
-      log("[embed] ✅ player created");
-      return player;
+      let player;
+
+      try {
+        if (sessionId && rtcUrl && lkToken) {
+          // Case A: Pre-minted LiveKit session
+          player = await window.HeyGenPlayer.create({
+            token: lkToken,   // 👈 force map into token
+            avatarId,
+            kbId,
+            sessionId,
+            rtcUrl,
+            container,
+          });
+        } else if (token) {
+          // Case B: Token-only path
+          player = await window.HeyGenPlayer.create({
+            token,
+            avatarId,
+            kbId,
+            container,
+          });
+        } else {
+          throw new Error("No token or accessToken provided");
+        }
+
+        statusEl.textContent = "Player created ✔ Waiting for stream…";
+        log("[embed] ✅ player created");
+
+        // Attach video manually if needed
+        if (player && player.stream) {
+          const videoEl = document.createElement("video");
+          videoEl.autoplay = true;
+          videoEl.playsInline = true;
+          videoEl.muted = true;
+          videoEl.srcObject = player.stream;
+          container.innerHTML = "";
+          container.appendChild(videoEl);
+          log("[embed] 🎥 manually attached stream (muted autoplay)");
+        }
+
+        statusEl.textContent = "Ready ✔";
+        return player;
+      } catch (err) {
+        log("[embed] ❌ error inside bootWith:", err?.message || err);
+        statusEl.textContent = "Error: " + (err?.message || err);
+        throw err;
+      }
     }
 
-    throw new Error("No valid LiveKit session+token provided.");
-  }
-
-  window.addEventListener("message", async (event) => {
-    try {
-      log("[embed] postMessage received:", event.data);
-      await bootWith(event.data || {});
-    } catch (err) {
-      log("[embed] ❌ error:", err?.message || err);
-      statusEl.textContent = "Error: " + (err?.message || err);
+    // Listen for Wix → postMessage
+    window.addEventListener("message", async (event) => {
+      try {
+        log("[embed] postMessage received:", event.data);
+        await bootWith(event.data || {});
+      } catch (err) {
+        log("[embed] ❌ postMessage error:", err?.message || err);
       }
     });
 
-    // 2) Debug → URL params flow (so you can test OUTSIDE Wix)
-    // Example:
-    //   ?token=sk_xxx
-    //   OR
-    //   ?sessionId=...&rtcUrl=wss://...&accessToken=...
+    // Debug URL params (optional)
     (async () => {
       const q = new URLSearchParams(location.search);
       const token       = q.get("token");
