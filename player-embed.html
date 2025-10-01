@@ -56,7 +56,7 @@
      if (sessionId && rtcUrl && accessToken) {
   // Pre-minted LiveKit session path
   player = await window.HeyGenPlayer.create({
-    token: accessToken,   // 👈 force-map LK accessToken into token
+    token = token || accessToken;
     avatarId,
     kbId,
     sessionId,
